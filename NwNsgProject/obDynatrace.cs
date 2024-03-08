@@ -40,7 +40,7 @@ namespace nsgFunc
 
             ServicePointManager.Expect100Continue = true;
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            ServicePointManager.ServerCertificateValidationCallback += new RemoteCertificateValidationCallback(ValidateMyCert);
+            ServicePointManager.ServerCertificateValidationCallback += new RemoteCertificateValidationCallback(ValidateDtCert);
 
             int bytesSent = 0;
 
@@ -101,7 +101,7 @@ namespace nsgFunc
             }
         }
 
-        public static bool ValidateMyCert(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors sslErr)
+        public static bool ValidateDtCert(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors sslErr)
         {
             var dynatraceCertThumbprint = Util.GetEnvironmentVariable("dynatraceCertThumbprint");
 
