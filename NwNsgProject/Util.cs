@@ -44,7 +44,7 @@ namespace nsgFunc
             string outputBinding = Util.GetEnvironmentVariable("outputBinding");
             if (outputBinding.Length == 0)
             {
-                log.LogError("Value for outputBinding is required. Permitted values are: 'arcsight', 'splunk', 'eventhub'.");
+                log.LogError("Value for outputBinding is required. Permitted values are: 'arcsight', 'splunk', 'eventhub', 'dynatrace'.");
                 return 0;
             }
 
@@ -103,6 +103,9 @@ namespace nsgFunc
                 case "eventhub":
                     bytesSent = await Util.obEventHub(newClientContent, log);
                     break;
+                case "dynatrace":
+                    bytesSent = await Util.obEventHub(newClientContent, log);
+                    break;
             }
             return bytesSent;
         }
@@ -150,6 +153,11 @@ namespace nsgFunc
                 return response;
             }
 
+            public static async Task<HttpResponseMessage> SendToDynatrace(HttpRequestMessage req)
+            {
+                HttpResponseMessage response = await HttpClient.SendAsync(req);
+                return response;
+            }
         }
 
         static IEnumerable<List<DenormalizedRecord>> denormalizedRecords(string newClientContent, Binder errorRecordBinder, ILogger log)
@@ -294,6 +302,66 @@ namespace nsgFunc
             finally
             {
                 ListPool<SplunkEventMessage>.Free(outgoingSplunkList);
+            }
+
+        }
+
+        static IEnumerable<List<DynatraceEventMessage>> denormalizedDynatraceEvents(string newClientContent, Binder errorRecordBinder, ILogger log)
+        {
+            var outgoingDynatraceList = ListPool<DynatraceEventMessage>.Allocate();
+            outgoingDynatraceList.Capacity = 450;
+            var sizeOfListItems = 0;
+
+            try
+            {
+                NSGFlowLogRecords logs = JsonConvert.DeserializeObject<NSGFlowLogRecords>(newClientContent);
+
+                foreach (var record in logs.records)
+                {
+                    float version = record.properties.Version;
+
+                    foreach (var outerFlow in record.properties.flows)
+                    {
+                        foreach (var innerFlow in outerFlow.flows)
+                        {
+                            foreach (var flowTuple in innerFlow.flowTuples)
+                            {
+                                var tuple = new NSGFlowLogTuple(flowTuple, version);
+
+                                var denormalizedRecord = new DenormalizedRecord(
+                                    record.properties.Version,
+                                    record.time,
+                                    record.category,
+                                    record.operationName,
+                                    record.resourceId,
+                                    outerFlow.rule,
+                                    innerFlow.mac,
+                                    tuple);
+
+                                var dynatraceEventMessage = new DynatraceEventMessage(denormalizedRecord);
+                                var sizeOfObject = dynatraceEventMessage.GetSizeOfObject();
+
+                                if (sizeOfListItems + sizeOfObject > MAXTRANSMISSIONSIZE + 20 || outgoingDynatraceList.Count == 450)
+                                {
+                                    yield return outgoingDynatraceList;
+                                    outgoingDynatraceList.Clear();
+                                    sizeOfListItems = 0;
+                                }
+                                outgoingDynatraceList.Add(dynatraceEventMessage);
+
+                                sizeOfListItems += sizeOfObject;
+                            }
+                        }
+                    }
+                }
+                if (sizeOfListItems > 0)
+                {
+                    yield return outgoingDynatraceList;
+                }
+            }
+            finally
+            {
+                ListPool<DynatraceEventMessage>.Free(outgoingDynatraceList);
             }
 
         }

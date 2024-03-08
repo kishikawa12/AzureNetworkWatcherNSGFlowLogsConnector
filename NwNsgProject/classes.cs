@@ -40,6 +40,39 @@ class SplunkEventMessages
     public List<SplunkEventMessage> splunkEventMessages { get; set; }
 }
 
+class DynatraceEventMessage
+{
+    public string sourcetype { get; set; }
+    public double time { get; set; }
+    public DenormalizedRecord @event { get; set; }
+
+    public DynatraceEventMessage (DenormalizedRecord dynatraceEvent)
+    {
+        sourcetype = "amdl:nsg:flowlogs";
+        time = unixTime(dynatraceEvent.time);
+        @event = dynatraceEvent;
+    }
+
+    double unixTime(string time)
+    {
+        DateTime t = DateTime.ParseExact(time,"yyyy-MM-ddTHH:mm:ss.fffffffZ", System.Globalization.CultureInfo.InvariantCulture);
+
+        double unixTimestamp = t.Ticks - new DateTime(1970, 1, 1).Ticks;
+        unixTimestamp /= TimeSpan.TicksPerSecond;
+        return unixTimestamp;
+    }
+
+    public int GetSizeOfObject()
+    {
+        return sourcetype.Length + 10 + 6 + (@event == null ? 0 : @event.GetSizeOfJSONObject());
+    }
+}
+
+class DynatraceEventMessages
+{
+    public List<DynatraceEventMessage> dynatraceEventMessages { get; set; }
+}
+
 class DenormalizedRecord
 {
     public string time { get; set; }
