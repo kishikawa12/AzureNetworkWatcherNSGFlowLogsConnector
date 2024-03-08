@@ -1,4 +1,4 @@
-﻿using Azure.Cosmos.Table;
+﻿using Microsoft.Azure.Cosmos.Table;
 
 namespace nsgFunc
 {
