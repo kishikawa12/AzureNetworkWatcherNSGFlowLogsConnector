@@ -104,7 +104,7 @@ namespace nsgFunc
                     bytesSent = await Util.obEventHub(newClientContent, log);
                     break;
                 case "dynatrace":
-                    bytesSent = await Util.obEventHub(newClientContent, log);
+                    bytesSent = await Util.obDynatrace(newClientContent, log);
                     break;
             }
             return bytesSent;
