@@ -1,7 +1,7 @@
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
-using Microsoft.Azure.Storage.Blob;
-using Microsoft.Azure.Cosmos.Table;
+using Azure.Storage.Blob;
+using Azure.Cosmos.Table;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
